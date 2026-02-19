@@ -15,6 +15,8 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}) # Allow all origins for API i
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+print(f"Server starting. Upload folder: {UPLOAD_FOLDER}")
+
 # Helper to encode image to base64
 def encode_image(img_path):
     if not os.path.exists(img_path):
@@ -25,6 +27,14 @@ def encode_image(img_path):
 def encode_cv2_image(img_array):
     _, buffer = cv2.imencode('.jpg', img_array)
     return base64.b64encode(buffer).decode('utf-8')
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "message": "RetinaLens AI Backend is running",
+        "upload_dir": str(os.path.exists(UPLOAD_FOLDER))
+    })
 
 @app.route('/api/upload', methods=['POST'])
 def upload_image():
