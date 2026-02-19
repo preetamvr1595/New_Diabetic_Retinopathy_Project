@@ -6,9 +6,12 @@ import DiagnosisStep from './components/DiagnosisStep';
 import ClassificationStep from './components/ClassificationStep';
 import Chatbot from './components/Chatbot';
 import PrescriptionSection from './components/PrescriptionSection';
+import AuthPage from './components/AuthPage';
+import ReportStep from './components/ReportStep';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [step, setStep] = useState(1);
     const [imageId, setImageId] = useState(null);
     const [originalImage, setOriginalImage] = useState(null);
@@ -48,74 +51,79 @@ function App() {
             case 4:
                 return <DiagnosisStep imageId={imageId} onNext={(data) => { updateAnalysis('diagnosis', data); nextStep(); }} />;
             case 5:
-                return <ClassificationStep imageId={imageId} onNext={(data) => { updateAnalysis('classification', data); nextStep(); }} />;
+                return (
+                    <ClassificationStep
+                        imageId={imageId}
+                        onNext={(data) => {
+                            updateAnalysis('classification', data);
+                            nextStep();
+                        }}
+                    />
+                );
             case 6:
                 return (
-                    <div className="text-center pb-5">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="glass-card p-5 rounded-4 shadow-lg mb-5 border-top border-5 border-primary"
-                        >
-                            <div className="mb-4 d-inline-flex p-4 rounded-circle bg-primary bg-opacity-10 text-primary shadow-sm">
-                                <i className="bi bi-shield-check-fill display-3"></i>
-                            </div>
-                            <h2 className="text-dark fw-extrabold display-5 mb-4">Analysis Successfully Completed</h2>
-                            <p className="lead text-muted-custom mb-5 px-md-5">
-                                Our multi-stage AI diagnostic engine has finalized its evaluation of the Retinal Fundus image.
-                                A comprehensive consensus has been reached between the <strong>Attention U-Net</strong> and <strong>VGG-16</strong> classification modules.
-                            </p>
-                            <div className="d-flex justify-content-center gap-4">
-                                <button className="btn btn-premium btn-lg rounded-pill px-5 shadow-lg d-flex align-items-center gap-2" onClick={() => window.print()}>
-                                    <i className="bi bi-file-earmark-pdf-fill"></i> Download Professional Report
-                                </button>
-                                <button className="btn btn-outline-dark btn-lg rounded-pill px-5 d-flex align-items-center gap-2" onClick={reset}>
-                                    <i className="bi bi-arrow-counterclockwise"></i> Start New Analysis
-                                </button>
-                            </div>
-                        </motion.div>
-
-                        <PrescriptionSection analysisData={analysisData} />
-                    </div>
+                    <ReportStep
+                        imageId={imageId}
+                        analysisData={analysisData}
+                        onReset={reset}
+                    />
                 );
             default:
                 return <UploadStep />;
         }
     }
 
+    if (!isAuthenticated) {
+        return <AuthPage onLogin={() => setIsAuthenticated(true)} />;
+    }
+
     return (
-        <div className="container py-5">
-            <header className="text-center mb-5 pt-5">
-                <h1 className="display-4 fw-bold text-dark">Diabetic Retinopathy <span className="highlight-text">Analysis</span></h1>
-                <p className="lead text-muted-custom">Advanced AI-Powered Clinical Diagnostic Dashboard</p>
+        <div className="container py-5 px-4" style={{ maxWidth: '1100px' }}>
+            <header className="text-center mb-5 mt-4">
+                <div className="d-inline-flex align-items-center gap-2 mb-2">
+                    <div className="auth-logo-circle mb-0" style={{ width: '28px', height: '28px' }}></div>
+                    <span className="fw-bold tracking-wider text-medical" style={{ fontSize: '0.85rem' }}>CLINICAL INTELLIGENCE</span>
+                </div>
+                <h1 className="display-5 fw-bold text-dark">RETINA<span className="text-medical">LENS</span></h1>
+                <p className="text-secondary lead font-heading" style={{ fontSize: '1.1rem', opacity: 0.8 }}>Advanced AI-Powered Fundus Diagnostic Suite</p>
             </header>
 
-            {/* Step Indicator */}
-            <div className="step-indicator">
+            {/* Medical Stepper Indicator */}
+            <div className="medical-stepper mb-5">
                 {[1, 2, 3, 4, 5, 6].map(i => (
-                    <div key={i} className={`step-dot ${step >= i ? 'active' : ''}`} />
+                    <div
+                        key={i}
+                        className={`medical-step ${step === i ? 'active' : ''} ${step > i ? 'completed' : ''}`}
+                    />
                 ))}
             </div>
 
-            <AnimatePresence mode='wait'>
-                <motion.div
-                    key={step}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    {renderStep()}
-                </motion.div>
-            </AnimatePresence>
+            <main style={{ minHeight: '60vh' }}>
+                <AnimatePresence mode='wait'>
+                    <motion.div
+                        key={step}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
+                    >
+                        {renderStep()}
+                    </motion.div>
+                </AnimatePresence>
+            </main>
 
-            {/* Global Chatbot */}
+            {/* Global Chatbot Integration */}
             {step > 1 && (
                 <Chatbot
-                    initialOpen={step === 6}
+                    initialOpen={step === 5}
                     analysisData={analysisData}
+                    currentStep={step}
                 />
             )}
+
+            <footer className="text-center mt-5 pt-4 border-top opacity-50">
+                <p className="small text-secondary">RETINALENS v2.4.0 // PRECISE CLINICAL DIAGNOSIS ENGINE</p>
+            </footer>
         </div>
     );
 }

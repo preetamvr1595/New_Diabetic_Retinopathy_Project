@@ -1,7 +1,7 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.pyc
 .venv/
 venv/
 ENV/
@@ -13,20 +13,14 @@ build/
 .env
 
 # Application
-uploads/*
-!uploads/.gitkeep
-backend/uploads/*
-!backend/uploads/.gitkeep
-
-# Models & Data (Include them now)
-# dataset/  <- Removed from ignore
-# *.h5     <- Removed from ignore
+uploads/
+backend/uploads/
 results/
 tests/
+
+# Logs
 *.log
-backend_error.txt
-frontend_log.txt
-mask_visualization.png
+*.txt
 
 # OS
 .DS_Store

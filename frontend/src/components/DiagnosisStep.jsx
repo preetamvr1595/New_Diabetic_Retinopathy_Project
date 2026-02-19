@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaChevronDown, FaChevronUp, FaMicroscope, FaBrain, FaWaveSquare } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 import api from '../api/axiosConfig';
 
 const DiagnosisStep = ({ imageId, onNext }) => {
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [showExplain, setShowExplain] = useState(false);
 
     useEffect(() => {
         const fetchDiagnosis = async () => {
@@ -24,112 +22,90 @@ const DiagnosisStep = ({ imageId, onNext }) => {
 
     if (loading) return (
         <div className="text-center py-5">
-            <h3 className="text-dark fw-bold">Analyzing Retinal Biomarkers...</h3>
-            <div className="spinner-grow text-primary mt-3" role="status"></div>
-            <p className="text-muted mt-3">Synthesizing segmentation data with classification logic</p>
+            <div className="medical-loader mb-4"></div>
+            <h3 className="text-medical fw-bold">ANALYZING RETINAL BIOMARKERS...</h3>
+            <p className="text-muted">Synthesizing segmentation data with classification logic</p>
         </div>
     );
 
     if (!result) return (
         <div className="text-center text-danger py-5">
-            <h3 className="fw-bold">Error Loading Analysis</h3>
+            <h3 className="fw-bold">DIAGNOSIS ERROR</h3>
             <p>Could not interpret findings. Please try again.</p>
-            <button className="btn btn-secondary rounded-pill px-4" onClick={() => window.location.reload()}>
-                Restart Analysis
+            <button className="btn btn-outline-danger rounded-pill px-4" onClick={() => window.location.reload()}>
+                RESTART ANALYSIS
             </button>
         </div>
     );
 
     const isDiabetic = result.label !== 'No_DR';
-    const statusText = isDiabetic ? 'Diabetic Retinopathy Detected' : 'Retinal Health Normal';
-    const statusColor = isDiabetic ? '#FF4D4D' : '#10b981';
-    const statusBg = isDiabetic ? 'rgba(255, 77, 77, 0.03)' : 'rgba(16, 185, 129, 0.03)';
-    const icon = isDiabetic ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill';
 
     return (
-        <div className="container" style={{ maxWidth: '900px' }}>
-            <div className="text-center mb-5">
-                <h2 className="text-dark fw-extrabold display-6" style={{ letterSpacing: '-0.03em' }}>Automated Clinical Screening</h2>
-                <p className="text-muted fw-medium">Neural interpretation of multimodal feature maps</p>
+        <div className="container-fluid px-0">
+            <div className="d-flex justify-content-between align-items-center mb-5">
+                <div>
+                    <h2 className="display-6 fw-bold text-dark font-heading mb-1">IMAGE DIAGNOSIS</h2>
+                    <p className="text-secondary mb-0">Automated detection of diabetic retinopathy pathologies</p>
+                </div>
+                <button className="btn-clinical btn-clinical-primary shadow-premium px-5 py-3" onClick={() => onNext(result)}>
+                    PROCEED TO CLASSIFICATION
+                </button>
             </div>
 
-            <motion.div
-                className="glass-card p-5 text-center shadow-lg border-2"
-                style={{ borderColor: statusColor, borderRadius: '32px' }}
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-            >
-                <div className="mb-4">
-                    <i className={`bi ${icon}`} style={{ fontSize: '7rem', color: statusColor, filter: `drop-shadow(0 10px 15px ${statusColor}30)` }}></i>
-                </div>
-
-                <h1 className="display-4 fw-extrabold mb-4" style={{ color: statusColor, letterSpacing: '-0.04em' }}>
-                    {statusText}
-                </h1>
-
-                <div className="p-4 rounded-4 mb-5" style={{ background: statusBg, border: `1px solid ${statusColor}15` }}>
-                    <p className="lead mb-0 text-dark fw-medium opacity-75" style={{ lineHeight: '1.7' }}>
-                        {isDiabetic
-                            ? 'Our AI has identified high-risk morphological patterns associated with Diabetic Retinopathy that require immediate clinical review.'
-                            : 'Neural analysis detected no significant vascular abnormalities indicative of Diabetic Retinopathy across all 14 clinical filters.'}
-                    </p>
-                </div>
-
-                {/* Explainability Section */}
-                <div className="mb-5 text-start">
-                    <button
-                        className="btn btn-light w-100 d-flex justify-content-between align-items-center p-3 rounded-3"
-                        onClick={() => setShowExplain(!showExplain)}
+            <div className="row justify-content-center">
+                <div className="col-lg-10">
+                    <motion.div
+                        className="medical-card p-5 border-0 shadow-premium position-relative"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{ background: 'white' }}
                     >
-                        <span className="fw-bold d-flex align-items-center gap-2">
-                            <FaBrain className="text-primary" /> Why This Diagnosis Was Made?
-                        </span>
-                        {showExplain ? <FaChevronUp /> : <FaChevronDown />}
-                    </button>
+                        <div className="text-center mb-5">
+                            <div className={`status-dot mb-4 ${isDiabetic ? 'bg-danger shadow-danger' : 'bg-success shadow-success'}`} style={{ width: '16px', height: '16px' }}></div>
+                            <h2 className="display-5 fw-bold font-heading mb-0 text-dark">DIAGNOSTIC VERDICT</h2>
 
-                    <AnimatePresence>
-                        {showExplain && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden mt-2"
-                            >
-                                <div className="p-4 bg-light rounded-3 border">
-                                    <div className="row g-4">
-                                        <div className="col-md-6">
-                                            <h6 className="fw-bold small text-uppercase text-primary mb-3">Key Features Identifed</h6>
-                                            <ul className="list-unstyled small text-muted">
-                                                <li className="mb-2 d-flex gap-2">
-                                                    <FaMicroscope className="mt-1 flex-shrink-0" />
-                                                    {isDiabetic ? 'Microaneurysms and exudate clusters localized via Attention U-Net.' : 'Uniform vascular distribution with no focal leakage identified.'}
-                                                </li>
-                                                <li className="mb-2 d-flex gap-2">
-                                                    <FaWaveSquare className="mt-1 flex-shrink-0" />
-                                                    {isDiabetic ? 'ACE ME Novel filter highlighted contrast variations in vessel density.' : 'Structural integrity of vessels preserved across all enhancement filters.'}
-                                                </li>
-                                            </ul>
-                                        </div>
-                                        <div className="col-md-6 border-start ps-md-4">
-                                            <h6 className="fw-bold small text-uppercase text-primary mb-3">Model Confidence Reasoning</h6>
-                                            <p className="small text-muted mb-0">
-                                                The classification engine integrated features from 14 distinct pre-processing filters.
-                                                Consistency across the <strong>ACE ME Novel</strong> and <strong>CLAHE</strong> feature maps provided {Math.round(result.confidence * 100)}% statistical support for this finding.
-                                            </p>
-                                        </div>
-                                    </div>
+                            <div className={`mt-4 d-inline-block px-5 py-3 rounded-pill fw-bold font-heading border-0 shadow-premium ${isDiabetic ? 'bg-danger-soft text-danger' : 'bg-success-soft text-success'}`} style={{ fontSize: '1.25rem', letterSpacing: '0.05em' }}>
+                                {isDiabetic ? 'DR DETECTED' : 'NO DR DETECTED'}
+                            </div>
+                        </div>
+
+                        <div className="mx-auto" style={{ maxWidth: '600px' }}>
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <span className="text-muted fw-bold small text-uppercase tracking-widest">RETINACORE CONFIDENCE INDEX</span>
+                                <span className="text-medical fw-bold font-heading">{(result.confidence * 100).toFixed(1)}%</span>
+                            </div>
+                            <div className="dt-progress-bar w-100 mb-5" style={{ height: '8px' }}>
+                                <motion.div
+                                    className="dt-progress-fill"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${result.confidence * 100}%` }}
+                                    transition={{ duration: 1, ease: "easeOut" }}
+                                />
+                            </div>
+
+                            <div className="p-5 rounded-4 border-0 bg-light position-relative overflow-hidden mb-4 shadow-inner">
+                                <div className="text-center">
+                                    <h6 className="text-muted fw-bold mb-4 tracking-widest text-uppercase" style={{ fontSize: '0.7rem' }}>CLINICAL OBSERVATION</h6>
+                                    <p className="text-secondary mb-0" style={{ lineHeight: '1.8', fontSize: '0.95rem' }}>
+                                        Pathology detection stage completed. The AI model has scanned the primary vascular regions and
+                                        identified potential markers consistent with <strong className="text-dark">{isDiabetic ? 'Diabetic Retinopathy' : 'No DR Detected'}</strong>.
+                                        Follow clinical protocol for secondary verification.
+                                    </p>
                                 </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+                            </div>
 
-                <div className="d-flex justify-content-center gap-3">
-                    <button className="btn btn-premium btn-lg rounded-pill px-5 shadow" onClick={() => onNext(result)}>
-                        {isDiabetic ? 'Detailed Severity Analysis' : 'Final Clinical Report'} <i className="bi bi-arrow-right ms-2"></i>
-                    </button>
+                            <div className="d-flex justify-content-center gap-4 text-muted small fw-bold tracking-widest text-uppercase" style={{ fontSize: '0.65rem' }}>
+                                <span className="d-flex align-items-center gap-2">
+                                    <i className="bi bi-shield-check-fill text-medical"></i> AI VALIDATED
+                                </span>
+                                <span className="d-flex align-items-center gap-2">
+                                    <i className="bi bi-lock-fill text-medical"></i> DICOM SECURE
+                                </span>
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 };

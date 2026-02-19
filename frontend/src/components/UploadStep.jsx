@@ -38,45 +38,35 @@ const UploadStep = ({ onUpload }) => {
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="glass-card p-5 text-center mx-auto position-relative overflow-hidden"
-            style={{ maxWidth: '750px' }}
+            className="medical-card p-5 text-center mx-auto position-relative overflow-hidden"
+            style={{ maxWidth: '800px' }}
         >
-            {/* Background Glow Effect */}
-            <div className="position-absolute top-0 start-0 w-100 h-100" style={{
-                background: 'radial-gradient(circle at top right, rgba(14, 165, 233, 0.05), transparent 40%)',
-                zIndex: 0
-            }} />
-
             <div className="position-relative" style={{ zIndex: 1 }}>
-                <div className="mb-4">
+                <div className="mb-5">
                     <motion.div
-                        whileHover={{ rotate: 15, scale: 1.1 }}
-                        className="bg-primary bg-opacity-10 text-primary rounded-4 d-inline-flex p-3 mb-3 shadow-sm"
+                        whileHover={{ scale: 1.05 }}
+                        className="bg-soft-blue text-medical rounded-4 d-inline-flex p-4 mb-4"
                     >
-                        <FaFileMedical size={40} />
+                        <FaFileMedical size={48} />
                     </motion.div>
-                    <h2 className="text-dark display-6 fw-bold">Upload Patient Fundus Image</h2>
-                    <p className="text-muted-custom lead px-4">Supported formats: JPG, PNG, TIFF. Ensure high resolution for best accuracy.</p>
+                    <h2 className="text-dark display-6 fw-bold font-heading">Secure Fundus Upload</h2>
+                    <p className="text-secondary lead px-4 opacity-75">Transfer DICOM or JPEGRetinal specimen for comprehensive AI analysis.</p>
                 </div>
 
-                <motion.div
+                <div
                     {...getRootProps()}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
                     className={`border-2 rounded-4 p-5 cursor-pointer transition-all ${isDragActive
-                            ? 'border-primary bg-primary bg-opacity-10 shadow-lg'
-                            : 'border-dashed border-primary border-opacity-25 bg-white bg-opacity-50'
+                        ? 'border-medical bg-soft-blue shadow-lg'
+                        : 'border-dashed border-medical bg-light bg-opacity-50'
                         }`}
                     style={{
-                        minHeight: '320px',
+                        minHeight: '340px',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        boxShadow: isDragActive ? '0 0 30px rgba(14, 165, 233, 0.2)' : 'none'
                     }}
                 >
                     <input {...getInputProps()} />
@@ -84,13 +74,13 @@ const UploadStep = ({ onUpload }) => {
                         {preview ? (
                             <motion.div
                                 key="preview"
-                                initial={{ opacity: 0, scale: 0.9 }}
+                                initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="position-relative"
                             >
-                                <img src={preview} alt="Preview" className="img-fluid rounded-4 shadow-md" style={{ maxHeight: '280px' }} />
-                                <div className="mt-3 text-primary fw-bold d-flex align-items-center justify-content-center gap-2">
-                                    <FaCloudUploadAlt /> Click to change image
+                                <img src={preview} alt="Preview" className="img-fluid rounded-4 shadow-sm" style={{ maxHeight: '300px' }} />
+                                <div className="mt-4 text-medical fw-bold d-flex align-items-center justify-content-center gap-2">
+                                    <FaCloudUploadAlt /> Click to re-upload image
                                 </div>
                             </motion.div>
                         ) : (
@@ -100,34 +90,34 @@ const UploadStep = ({ onUpload }) => {
                                 animate={{ opacity: 1 }}
                                 className="d-flex flex-column align-items-center"
                             >
-                                <FaCloudUploadAlt size={80} className={`mb-3 transition-all ${isDragActive ? 'text-primary animate-pulse-custom' : 'text-primary opacity-50'}`} />
-                                <h4 className="text-dark fw-bold">Drag & Drop or Click to Upload</h4>
-                                <p className="text-muted small mb-0">Secure DICOM/Image Transfer Protocol</p>
-                                <div className="badge bg-light text-primary border border-primary border-opacity-10 px-3 py-2 rounded-pill mt-4 shadow-sm">
-                                    <i className="bi bi-shield-check me-2"></i>HIPAA Compliant Transfer
+                                <FaCloudUploadAlt size={72} className={`mb-4 transition-all ${isDragActive ? 'text-medical' : 'text-medical opacity-30'}`} />
+                                <h4 className="text-dark fw-bold font-heading">Drag & Drop Specimen</h4>
+                                <p className="text-secondary small mb-0">High-Resolution Fundus Imaging Required</p>
+                                <div className="badge bg-soft-blue text-medical px-4 py-2 rounded-pill mt-5 fw-bold">
+                                    <i className="bi bi-shield-lock-fill me-2"></i>HIPAA PROTOCOL ACTIVE
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </motion.div>
+                </div>
 
                 {uploading && (
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        className="mt-4"
+                        className="mt-5"
                     >
-                        <div className="progress rounded-pill bg-light shadow-inner" style={{ height: '10px' }}>
+                        <div className="progress rounded-pill bg-light" style={{ height: '8px' }}>
                             <motion.div
-                                className="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                className="progress-bar bg-medical"
                                 role="progressbar"
                                 initial={{ width: 0 }}
                                 animate={{ width: '100%' }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
+                                transition={{ duration: 2, repeat: Infinity }}
                             />
                         </div>
-                        <p className="text-primary mt-3 small fw-bold tracking-wide text-uppercase">
-                            Analyzing Retinal Biomarkers...
+                        <p className="text-medical mt-4 small fw-bold tracking-widest text-uppercase">
+                            SECURE ARCHIVING & PRE-SCREENING...
                         </p>
                     </motion.div>
                 )}

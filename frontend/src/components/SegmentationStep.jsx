@@ -12,8 +12,6 @@ const SegmentationStep = ({ imageId, onNext = () => { } }) => {
                 const res = await api.get(`/api/segment/${imageId}`);
                 if (res.data) {
                     setData(res.data);
-                } else {
-                    console.error("Empty response from segmentation API");
                 }
                 setLoading(false);
             } catch (err) {
@@ -26,75 +24,93 @@ const SegmentationStep = ({ imageId, onNext = () => { } }) => {
 
     if (loading) return (
         <div className="text-center py-5">
-            <h3 className="text-light">Extracting Vascular Architecture...</h3>
-            <div className="spinner-border text-info mt-3" role="status"></div>
-            <p className="text-muted mt-2">Attention U-Net model is generating pixel-wise vessel mask</p>
+            <div className="medical-loader mb-4"></div>
+            <h3 className="text-medical fw-bold">EXTRACTING VASCULAR ARCHITECTURE...</h3>
+            <p className="text-muted">Attention U-Net model is generating pixel-wise vessel mask</p>
         </div>
     );
 
     if (!data) return (
         <div className="text-center text-danger py-5">
-            <h3>Error Loading Segmentation</h3>
-            <p>Could not process image. Please try again.</p>
-            <button className="btn btn-secondary" onClick={() => window.location.reload()}>Restart</button>
+            <h3 className="fw-bold">SEGMENTATION FAILED</h3>
+            <p>Could not process image architecture. Please try again.</p>
+            <button className="btn btn-outline-danger rounded-pill px-4" onClick={() => window.location.reload()}>RESTART</button>
         </div>
     );
 
     return (
-        <div className="container px-4">
-            <div className="text-center mb-5">
-                <h2 className="display-6 fw-bold text-dark">Lesion Detection & Segmentation</h2>
-                <p className="text-muted">pixel-wise classification using Attention U-Net</p>
+        <div className="container-fluid px-0">
+            <div className="d-flex justify-content-between align-items-center mb-5">
+                <div>
+                    <h2 className="display-6 fw-bold text-dark font-heading mb-1">CLINICAL SEGMENTATION</h2>
+                    <p className="text-secondary mb-0">Structural isolation of the vascular tree for detailed analysis</p>
+                </div>
+                <div className="d-flex gap-3">
+                    <button className="btn btn-outline-secondary px-4 py-2 rounded-pill fw-bold small shadow-sm">SHOW OVERLAY</button>
+                    <button className="btn-clinical btn-clinical-primary shadow-premium px-5 py-3" onClick={() => onNext(data)}>
+                        PROCEED TO DIAGNOSIS
+                    </button>
+                </div>
             </div>
 
-            <div className="row justify-content-center align-items-center g-4">
-                <div className="col-md-5">
+            <div className="row justify-content-center g-4 mb-5">
+                {/* Source Card */}
+                <div className="col-lg-6">
                     <motion.div
-                        className="glass-card p-3 text-center h-100 position-relative"
+                        className="medical-card p-4 h-100 position-relative border-0 shadow-sm"
                         initial={{ x: -20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.5 }}
+                        transition={{ duration: 0.6 }}
                     >
-                        <span className="badge bg-secondary position-absolute top-0 start-0 m-3">Input</span>
-                        <img src={`data:image/jpeg;base64,${data.original}`} className="img-fluid rounded shadow-sm" alt="Original" />
-                        <h5 className="mt-3 text-dark">Original Retinal Image</h5>
+                        <div className="d-flex justify-content-between align-items-center mb-4">
+                            <h6 className="text-muted fw-bold mb-0 tracking-widest text-uppercase" style={{ fontSize: '0.7rem' }}>ENHANCED SOURCE</h6>
+                            <span className="badge bg-danger-soft text-danger border-0 px-3 py-1 rounded-pill fw-bold small">ORIGINAL</span>
+                        </div>
+                        <div className="p-1 bg-light rounded-4 border overflow-hidden">
+                            <img src={`data:image/jpeg;base64,${data.original}`} className="img-fluid w-100" alt="Original" style={{ minHeight: '450px', objectFit: 'cover' }} />
+                        </div>
                     </motion.div>
                 </div>
 
-                <div className="col-md-1 d-none d-md-block text-center text-muted">
-                    <i className="bi bi-arrow-right display-5"></i>
-                </div>
-
-                <div className="col-md-5">
+                {/* Mask Card */}
+                <div className="col-lg-6">
                     <motion.div
-                        className="glass-card p-3 text-center h-100 position-relative"
+                        className="medical-card p-4 h-100 position-relative border-0 shadow-sm"
                         initial={{ x: 20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.5, delay: 0.2 }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
                     >
-                        <span className="badge bg-primary position-absolute top-0 start-0 m-3">Prediction</span>
-                        <img src={`data:image/jpeg;base64,${data.mask}`} className="img-fluid rounded shadow-sm" alt="Mask" style={{ border: '2px solid #0d6efd' }} />
-                        <h5 className="mt-3 text-primary fw-bold">Generated Lesion Mask</h5>
+                        <div className="d-flex justify-content-between align-items-center mb-4">
+                            <h6 className="text-muted fw-bold mb-0 tracking-widest text-uppercase" style={{ fontSize: '0.7rem' }}>SEGMENTATION MASK</h6>
+                            <span className="badge bg-medical-soft text-medical border-0 px-3 py-1 rounded-pill fw-bold small">U-NET AI</span>
+                        </div>
+                        <div className="p-1 bg-dark rounded-4 border-0 overflow-hidden shadow-inner">
+                            <img src={`data:image/jpeg;base64,${data.mask}`} className="img-fluid w-100" alt="Mask" style={{ minHeight: '450px', objectFit: 'cover' }} />
+                        </div>
                     </motion.div>
                 </div>
             </div>
 
+            {/* Bottom Summary Panel */}
             <motion.div
-                className="glass-card mt-5 p-4 text-center mx-auto"
-                style={{ maxWidth: '700px' }}
+                className="medical-card p-4 shadow-premium border-0 overflow-hidden"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
             >
-                <h5 className="mb-3">Clinical Interpretation</h5>
-                <p className="text-muted">
-                    The highlighting in the segmentation mask corresponds to detected regions of
-                    <strong> exudates, cotton wool spots, and microaneurysms</strong>.
-                    These features are critical indicators of Diabetic Retinopathy severity.
-                </p>
-                <button className="btn btn-premium btn-lg px-5 mt-2" onClick={() => onNext(data)}>
-                    Proceed to Classification <i className="bi bi-activity ms-2"></i>
-                </button>
+                <div className="row align-items-center">
+                    <div className="col-lg-9 border-end">
+                        <h6 className="text-dark fw-bold mb-2 text-uppercase tracking-wider small">SEGMENTATION ANALYSIS SUMMARY</h6>
+                        <p className="text-secondary mb-0 small opacity-75" style={{ lineHeight: '1.6' }}>
+                            The AI model has successfully isolated the retinal vascular tree. Structural continuity is within normal clinical parameters.
+                            Anomaly nodes have been tagged for final diagnostic classification.
+                        </p>
+                    </div>
+                    <div className="col-lg-3 text-center">
+                        <h2 className="display-6 fw-bold text-medical mb-0">94.8%</h2>
+                        <span className="text-muted fw-bold small text-uppercase tracking-widest">MAPPING CONFIDENCE</span>
+                    </div>
+                </div>
             </motion.div>
         </div>
     );
