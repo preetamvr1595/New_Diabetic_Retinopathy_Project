@@ -10,7 +10,7 @@ from segmentation import segment_image
 from classification import classify_image
 
 app = Flask(__name__)
-CORS(app) # Enable CORS for React frontend
+CORS(app, resources={r"/api/*": {"origins": "*"}}) # Allow all origins for API in production
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -108,5 +108,6 @@ def serve_uploads(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 if __name__ == '__main__':
-    print("Starting Flask Server...")
-    app.run(host='0.0.0.0', debug=False, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    print(f"Starting Flask Server on port {port}...")
+    app.run(host='0.0.0.0', debug=False, port=port)

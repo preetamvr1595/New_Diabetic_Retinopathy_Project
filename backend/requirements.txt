@@ -8,3 +8,4 @@ scipy
 pandas
 matplotlib
 werkzeug
+gunicorn
