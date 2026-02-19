@@ -40,7 +40,15 @@ def classify_image(image_path):
     img = img / 255.0
     img = np.expand_dims(img, axis=(0, -1))
 
+    import tensorflow as tf
     preds = model.predict(img)[0]
     idx = np.argmax(preds)
-
-    return CLASSES[idx], float(preds[idx])
+    
+    # Critical: Free memory
+    label = CLASSES[idx]
+    conf = float(preds[idx])
+    
+    del model
+    tf.keras.backend.clear_session()
+    
+    return label, conf

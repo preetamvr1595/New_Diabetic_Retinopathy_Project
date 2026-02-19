@@ -149,6 +149,11 @@ def segment_image(image_path):
     mask_filename = f"mask_{base_name}"
     mask_path = os.path.join(dir_name, mask_filename)
     
+    import tensorflow as tf
     cv2.imwrite(mask_path, mask_resized)
+    
+    # Critical: Free memory
+    del model
+    tf.keras.backend.clear_session()
     
     return mask_path
