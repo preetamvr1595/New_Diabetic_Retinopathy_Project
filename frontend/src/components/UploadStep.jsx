@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { useDropzone } from 'react-dropzone';
 import { FaCloudUploadAlt, FaFileMedical } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,7 +17,7 @@ const UploadStep = ({ onUpload }) => {
         formData.append('image', file);
 
         try {
-            const res = await axios.post('/api/upload', formData, {
+            const res = await api.post('/api/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setTimeout(() => {

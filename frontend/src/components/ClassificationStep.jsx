@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { motion } from 'framer-motion';
 
 const ClassificationStep = ({ imageId, onNext }) => {
@@ -7,7 +7,7 @@ const ClassificationStep = ({ imageId, onNext }) => {
 
     useEffect(() => {
         const fetchClassification = async () => {
-            const res = await axios.get(`/api/classify/${imageId}`);
+            const res = await api.get(`/api/classify/${imageId}`);
             setResult(res.data);
         };
         fetchClassification();

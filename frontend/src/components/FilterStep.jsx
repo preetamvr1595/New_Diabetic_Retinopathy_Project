@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../api/axiosConfig';
 import { motion } from 'framer-motion';
 
 const FilterStep = ({ imageId, onNext }) => {
@@ -11,7 +11,7 @@ const FilterStep = ({ imageId, onNext }) => {
     useEffect(() => {
         const fetchFilters = async () => {
             try {
-                const res = await axios.get(`/api/filters/${imageId}`);
+                const res = await api.get(`/api/filters/${imageId}`);
                 let data = res.data;
 
                 // Boost ACE_ME_Novel metrics slightly as requested for "best" aim
