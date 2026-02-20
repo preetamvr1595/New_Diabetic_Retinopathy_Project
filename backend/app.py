@@ -38,10 +38,14 @@ def health_check():
 
 @app.route('/api/upload', methods=['POST'])
 def upload_image():
+    print("Received upload request")
     if 'image' not in request.files:
+        print("Error: No image part in request")
         return jsonify({"error": "No image part"}), 400
     file = request.files['image']
+    print(f"File received: {file.filename}")
     if file.filename == '':
+        print("Error: Empty filename")
         return jsonify({"error": "No selected file"}), 400
     
     # Save file with unique ID
