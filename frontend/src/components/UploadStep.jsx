@@ -25,7 +25,8 @@ const UploadStep = ({ onUpload }) => {
             }, 1000);
         } catch (err) {
             console.error(err);
-            alert("Upload failed");
+            const errorMsg = err.response ? `Error: ${err.response.status} - ${err.response.data?.error || err.message}` : `Network Error: ${err.message}`;
+            alert(`Upload failed!\n${errorMsg}\nConfig URL: ${api.defaults.baseURL}`);
             setUploading(false);
         }
     };
