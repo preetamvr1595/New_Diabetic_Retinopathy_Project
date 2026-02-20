@@ -4,8 +4,8 @@ import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
-    baseURL: API_BASE_URL,
-    timeout: 60000, // 60 seconds for slow model loading
+    baseURL: 'https://newdiabeticretinopathyproject-production.up.railway.app',
+    timeout: 90000, // 90 seconds for heavy model loading
 });
 
 export default api;

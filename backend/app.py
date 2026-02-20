@@ -33,7 +33,9 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "message": "RetinaLens AI Backend is running",
-        "upload_dir": str(os.path.exists(UPLOAD_FOLDER))
+        "upload_dir": str(os.path.exists(UPLOAD_FOLDER)),
+        "mode": "production",
+        "env": os.environ.get('RAILWAY_ENVIRONMENT', 'unknown')
     })
 
 @app.route('/api/upload', methods=['POST'])
