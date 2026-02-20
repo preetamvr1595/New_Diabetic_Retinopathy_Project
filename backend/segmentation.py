@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 import tensorflow as tf
+import gc
 from tensorflow.keras.layers import (
     Conv2D, MaxPooling2D, UpSampling2D,
     Input, BatchNormalization, Activation,
@@ -120,6 +121,7 @@ def get_model():
 # INFERENCE FUNCTION
 # ==============================
 def segment_image(image_path):
+    global model
     model = get_model()
     if model is None:
         print("Model not loaded, cannot segment.")
@@ -149,11 +151,11 @@ def segment_image(image_path):
     mask_filename = f"mask_{base_name}"
     mask_path = os.path.join(dir_name, mask_filename)
     
-    import tensorflow as tf
     cv2.imwrite(mask_path, mask_resized)
     
     # Critical: Free memory
-    del model
+    model = None
     tf.keras.backend.clear_session()
+    gc.collect()
     
     return mask_path

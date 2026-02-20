@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras.models import load_model
-
 import os
+import gc
 
 CLASSES = ["No_DR", "Mild_DR", "Severe_DR"]
 
@@ -40,15 +41,15 @@ def classify_image(image_path):
     img = img / 255.0
     img = np.expand_dims(img, axis=(0, -1))
 
-    import tensorflow as tf
     preds = model.predict(img)[0]
     idx = np.argmax(preds)
     
-    # Critical: Free memory
     label = CLASSES[idx]
     conf = float(preds[idx])
     
-    del model
+    # Critical: Free memory
+    model = None
     tf.keras.backend.clear_session()
+    gc.collect()
     
     return label, conf
