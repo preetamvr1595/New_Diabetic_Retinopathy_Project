@@ -65,11 +65,12 @@ def download_models_if_needed():
             }
             headers = {
                 "Accept": "application/vnd.git-lfs+json",
-                "Content-Type": "application/vnd.git-lfs+json",
-                "Authorization": f"token {api_key}"
+                "Content-Type": "application/vnd.git-lfs+json"
             }
             
-            resp = requests.post(lfs_url, json=payload, headers=headers)
+            # Using HTTPBasicAuth for GitHub LFS with token
+            from requests.auth import HTTPBasicAuth
+            resp = requests.post(lfs_url, json=payload, headers=headers, auth=HTTPBasicAuth('token', api_key))
             resp.raise_for_status()
             lfs_data = resp.json()
             
