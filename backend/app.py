@@ -30,10 +30,24 @@ def encode_cv2_image(img_array):
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    models_dir = os.path.join(curr_dir, "models")
+    model_stats = {}
+    
+    if os.path.exists(models_dir):
+        for f in os.listdir(models_dir):
+            if f.endswith('.h5'):
+                path = os.path.join(models_dir, f)
+                model_stats[f] = {
+                    "exists": True,
+                    "size": os.path.getsize(path)
+                }
+    
     return jsonify({
         "status": "healthy",
         "message": "RetinaLens AI Backend is running",
         "upload_dir": str(os.path.exists(UPLOAD_FOLDER)),
+        "models": model_stats,
         "mode": "production",
         "env": os.environ.get('RAILWAY_ENVIRONMENT', 'unknown')
     })
