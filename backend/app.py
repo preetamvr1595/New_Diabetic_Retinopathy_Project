@@ -29,71 +29,75 @@ def download_models_if_needed():
     api_key = os.environ.get('GITHUB_API_KEY')
     
     if not api_key:
-        msg = "GITHUB_API_KEY not found in environment. Skipping auto-download."
-        print(msg)
-        DOWNLOAD_LOGS.append(msg)
+        DOWNLOAD_LOGS.append("GITHUB_API_KEY not found. Skipping auto-download.")
         return
 
-    # Log token properties for debugging (hidden value)
-    token_prefix = api_key[:4] + "..." if len(api_key) > 4 else api_key
-    DOWNLOAD_LOGS.append(f"GITHUB_API_KEY detected: {token_prefix} (length: {len(api_key)})")
-
     models = [
-        "dr_classifier.h5",
-        "attention_unet.h5"
+        {
+            "name": "dr_classifier.h5",
+            "oid": "23bea1bd9f4dbab68d5a933d18c30f9e8d752ad7af573ec18d2f70417932371946",
+            "size": 286928304
+        },
+        {
+            "name": "attention_unet.h5",
+            "oid": "e5376aee6e5d8ec68770742f50529d1872199d79313d33f7ccb837f480436f54",
+            "size": 389668688
+        }
     ]
 
-    needs_download = False
-    for model_name in models:
+    for model in models:
+        model_name = model["name"]
         model_path = os.path.join(models_dir, model_name)
-        if not os.path.exists(model_path) or os.path.getsize(model_path) < 1000:
-            needs_download = True
-            DOWNLOAD_LOGS.append(f"Model {model_name} needs full download.")
-    
-    if needs_download:
-        temp_repo_dir = None
-        try:
-            DOWNLOAD_LOGS.append("Starting fresh git clone (Attempt 2) to fetch LFS models...")
-            temp_repo_dir = tempfile.mkdtemp()
-            
-            # Use the token for the clone URL
-            clone_url = f"https://{api_key}@github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git"
-            
-            # Clone with --depth 1 (includes LFS files if git-lfs is installed)
-            result = subprocess.run([
-                "git", "clone", "--depth", "1", clone_url, temp_repo_dir
-            ], capture_output=True, text=True, timeout=300)
-            
-            if result.returncode != 0:
-                DOWNLOAD_LOGS.append(f"Git Clone Failed: {result.stderr[:200]}")
-                return
+        
+        if os.path.exists(model_path) and os.path.getsize(model_path) > 1000:
+            DOWNLOAD_LOGS.append(f"Model {model_name} already exists (size: {os.path.getsize(model_path)}).")
+            continue
 
-            DOWNLOAD_LOGS.append("Clone successful. Verifying models in clone...")
+        try:
+            DOWNLOAD_LOGS.append(f"Requesting LFS download link for {model_name}...")
             
-            # Source path in the cloned repo
-            src_models_dir = os.path.join(temp_repo_dir, "backend", "models")
+            # LFS Batch API Request
+            lfs_url = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git/info/lfs/objects/batch"
+            payload = {
+                "operation": "download",
+                "transfers": ["basic"],
+                "objects": [{"oid": model["oid"], "size": model["size"]}]
+            }
+            headers = {
+                "Accept": "application/vnd.git-lfs+json",
+                "Content-Type": "application/vnd.git-lfs+json",
+                "Authorization": f"token {api_key}"
+            }
             
-            for model_name in models:
-                src_path = os.path.join(src_models_dir, model_name)
-                dest_path = os.path.join(models_dir, model_name)
+            resp = requests.post(lfs_url, json=payload, headers=headers)
+            resp.raise_for_status()
+            lfs_data = resp.json()
+            
+            # Extract download URL and headers
+            obj_data = lfs_data['objects'][0]
+            if 'error' in obj_data:
+                DOWNLOAD_LOGS.append(f"LFS API Error for {model_name}: {obj_data['error']}")
+                continue
                 
-                if os.path.exists(src_path):
-                    size = os.path.getsize(src_path)
-                    DOWNLOAD_LOGS.append(f"Found {model_name} in clone (size: {size}).")
-                    if size > 1000:
-                        shutil.copy2(src_path, dest_path)
-                        DOWNLOAD_LOGS.append(f"Successfully replaced {model_name} with full version.")
-                    else:
-                        DOWNLOAD_LOGS.append(f"WARNING: {model_name} in clone is ALSO an LFS pointer!")
-                else:
-                    DOWNLOAD_LOGS.append(f"Could not find {model_name} in cloned repository at {src_path}")
-                    
+            download_action = obj_data['actions']['download']
+            download_url = download_action['href']
+            download_headers = download_action.get('header', {})
+            
+            DOWNLOAD_LOGS.append(f"Downloading {model_name} (direct LFS link)...")
+            
+            with requests.get(download_url, headers=download_headers, stream=True) as r:
+                r.raise_for_status()
+                with open(model_path, 'wb') as f:
+                    downloaded = 0
+                    for chunk in r.iter_content(chunk_size=1024*1024): # 1MB chunks
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            
+            DOWNLOAD_LOGS.append(f"Successfully downloaded {model_name}. Final size: {os.path.getsize(model_path)}")
+            
         except Exception as e:
-            DOWNLOAD_LOGS.append(f"Error during model fetch: {str(e)}")
-        finally:
-            if temp_repo_dir and os.path.exists(temp_repo_dir):
-                shutil.rmtree(temp_repo_dir, ignore_errors=True)
-                DOWNLOAD_LOGS.append("Cleaned up temporary clone.")
+            DOWNLOAD_LOGS.append(f"Error fetching {model_name}: {str(e)}")
 
 # Call download logic before starting
 download_models_if_needed()
