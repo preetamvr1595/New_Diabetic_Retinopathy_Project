@@ -22,14 +22,20 @@ import subprocess
 # Global variable to store download logs for health check
 DOWNLOAD_LOGS = []
 
+from requests.auth import HTTPBasicAuth
+
 def download_models_if_needed():
     global DOWNLOAD_LOGS
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(curr_dir, "models")
     api_key = os.environ.get('GITHUB_API_KEY')
     
+    def log(msg):
+        t = time.strftime("%H:%M:%S")
+        DOWNLOAD_LOGS.append(f"[{t}] {msg}")
+
     if not api_key:
-        DOWNLOAD_LOGS.append("GITHUB_API_KEY not found. Skipping auto-download.")
+        log("GITHUB_API_KEY not found. Skipping auto-download.")
         return
 
     models = [
@@ -50,55 +56,42 @@ def download_models_if_needed():
         model_path = os.path.join(models_dir, model_name)
         
         if os.path.exists(model_path) and os.path.getsize(model_path) > 1000:
-            DOWNLOAD_LOGS.append(f"Model {model_name} already exists (size: {os.path.getsize(model_path)}).")
+            log(f"Model {model_name} exists (Size: {os.path.getsize(model_path)}).")
             continue
 
         try:
-            DOWNLOAD_LOGS.append(f"Requesting LFS download link for {model_name}...")
-            
-            # LFS Batch API Request
+            log(f"Requesting LFS Batch API for {model_name}...")
             lfs_url = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git/info/lfs/objects/batch"
             payload = {
                 "operation": "download",
                 "transfers": ["basic"],
                 "objects": [{"oid": model["oid"], "size": model["size"]}]
             }
-            headers = {
-                "Accept": "application/vnd.git-lfs+json",
-                "Content-Type": "application/vnd.git-lfs+json"
-            }
+            headers = {"Accept": "application/vnd.git-lfs+json", "Content-Type": "application/vnd.git-lfs+json"}
             
-            # Using HTTPBasicAuth for GitHub LFS with token
-            from requests.auth import HTTPBasicAuth
             resp = requests.post(lfs_url, json=payload, headers=headers, auth=HTTPBasicAuth('token', api_key))
             resp.raise_for_status()
             lfs_data = resp.json()
             
-            # Extract download URL and headers
             obj_data = lfs_data['objects'][0]
             if 'error' in obj_data:
-                DOWNLOAD_LOGS.append(f"LFS API Error for {model_name}: {obj_data['error']}")
+                log(f"LFS API Error: {obj_data['error']}")
                 continue
                 
-            download_action = obj_data['actions']['download']
-            download_url = download_action['href']
-            download_headers = download_action.get('header', {})
+            download_url = obj_data['actions']['download']['href']
+            download_headers = obj_data['actions']['download'].get('header', {})
             
-            DOWNLOAD_LOGS.append(f"Downloading {model_name} (direct LFS link)...")
-            
+            log(f"Downloading {model_name}...")
             with requests.get(download_url, headers=download_headers, stream=True) as r:
                 r.raise_for_status()
                 with open(model_path, 'wb') as f:
-                    downloaded = 0
-                    for chunk in r.iter_content(chunk_size=1024*1024): # 1MB chunks
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
+                    for chunk in r.iter_content(chunk_size=1024*1024):
+                        if chunk: f.write(chunk)
                             
-            DOWNLOAD_LOGS.append(f"Successfully downloaded {model_name}. Final size: {os.path.getsize(model_path)}")
+            log(f"SUCCESS: {model_name} downloaded ({os.path.getsize(model_path)} bytes).")
             
         except Exception as e:
-            DOWNLOAD_LOGS.append(f"Error fetching {model_name}: {str(e)}")
+            log(f"FAILED {model_name}: {str(e)}")
 
 # Call download logic before starting
 download_models_if_needed()
