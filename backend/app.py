@@ -15,14 +15,22 @@ import time
 GITHUB_OWNER = "preetamvr1595"
 GITHUB_REPO = "New_Diabetic_Retinopathy_Project"
 
+# Global variable to store download logs for health check
+DOWNLOAD_LOGS = []
+
 def download_models_if_needed():
+    global DOWNLOAD_LOGS
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(curr_dir, "models")
     api_key = os.environ.get('GITHUB_API_KEY')
     
     if not api_key:
-        print("GITHUB_API_KEY not found in environment. Skipping auto-download.")
+        msg = "GITHUB_API_KEY not found in environment. Skipping auto-download."
+        print(msg)
+        DOWNLOAD_LOGS.append(msg)
         return
+
+    DOWNLOAD_LOGS.append(f"GITHUB_API_KEY found (length: {len(api_key)})")
 
     models = [
         "dr_classifier.h5",
@@ -35,12 +43,11 @@ def download_models_if_needed():
         
         if not os.path.exists(model_path):
             needs_download = True
-            print(f"Model {model_name} missing. Downloading...")
+            DOWNLOAD_LOGS.append(f"Model {model_name} missing.")
         else:
-            # Check if it's an LFS pointer (usually < 1KB)
             if os.path.getsize(model_path) < 1000:
                 needs_download = True
-                print(f"Model {model_name} appears to be an LFS pointer. Downloading full model...")
+                DOWNLOAD_LOGS.append(f"Model {model_name} is LFS pointer (size: {os.path.getsize(model_path)}).")
         
         if needs_download:
             url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/backend/models/{model_name}"
@@ -50,24 +57,16 @@ def download_models_if_needed():
             }
             
             try:
-                print(f"Starting download of {model_name}...")
+                DOWNLOAD_LOGS.append(f"Downloading {model_name} from GitHub API...")
                 with requests.get(url, headers=headers, stream=True) as r:
                     r.raise_for_status()
-                    total_size = int(r.headers.get('content-length', 0))
-                    downloaded = 0
-                    start_time = time.time()
-                    
                     with open(model_path, 'wb') as f:
                         for chunk in r.iter_content(chunk_size=8192):
                             if chunk:
                                 f.write(chunk)
-                                downloaded += len(chunk)
-                                if time.time() - start_time > 5: # Print progress every 5 seconds
-                                    print(f"Downloading {model_name}: {downloaded}/{total_size} bytes ({(downloaded/total_size)*100:.2f}%)")
-                                    start_time = time.time()
-                print(f"Successfully downloaded {model_name}.")
+                DOWNLOAD_LOGS.append(f"Successfully downloaded {model_name}. New size: {os.path.getsize(model_path)}")
             except Exception as e:
-                print(f"Error downloading {model_name}: {e}")
+                DOWNLOAD_LOGS.append(f"Error downloading {model_name}: {str(e)}")
 
 # Call download logic before starting
 download_models_if_needed()
@@ -111,6 +110,7 @@ def health_check():
         "message": "RetinaLens AI Backend is running",
         "upload_dir": str(os.path.exists(UPLOAD_FOLDER)),
         "models": model_stats,
+        "download_logs": DOWNLOAD_LOGS,
         "mode": "production",
         "env": os.environ.get('RAILWAY_ENVIRONMENT', 'unknown')
     })
