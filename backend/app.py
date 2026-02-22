@@ -30,7 +30,9 @@ def download_models_if_needed():
         DOWNLOAD_LOGS.append(msg)
         return
 
-    DOWNLOAD_LOGS.append(f"GITHUB_API_KEY found (length: {len(api_key)})")
+    # Log only the first 4 chars and length for security debugging
+    token_prefix = api_key[:4] + "..." if len(api_key) > 4 else api_key
+    DOWNLOAD_LOGS.append(f"GITHUB_API_KEY detected: {token_prefix} (length: {len(api_key)})")
 
     models = [
         "dr_classifier.h5",
