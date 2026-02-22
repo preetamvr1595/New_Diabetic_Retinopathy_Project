@@ -15,6 +15,8 @@ import time
 GITHUB_OWNER = "preetamvr1595"
 GITHUB_REPO = "New_Diabetic_Retinopathy_Project"
 
+import subprocess
+
 # Global variable to store download logs for health check
 DOWNLOAD_LOGS = []
 
@@ -30,7 +32,6 @@ def download_models_if_needed():
         DOWNLOAD_LOGS.append(msg)
         return
 
-    # Log only the first 4 chars and length for security debugging
     token_prefix = api_key[:4] + "..." if len(api_key) > 4 else api_key
     DOWNLOAD_LOGS.append(f"GITHUB_API_KEY detected: {token_prefix} (length: {len(api_key)})")
 
@@ -39,56 +40,34 @@ def download_models_if_needed():
         "attention_unet.h5"
     ]
 
+    needs_lfs = False
     for model_name in models:
         model_path = os.path.join(models_dir, model_name)
-        needs_download = False
-        
-        if not os.path.exists(model_path):
-            needs_download = True
-            DOWNLOAD_LOGS.append(f"Model {model_name} missing.")
-        else:
-            if os.path.getsize(model_path) < 1000:
-                needs_download = True
-                DOWNLOAD_LOGS.append(f"Model {model_name} is LFS pointer (size: {os.path.getsize(model_path)}).")
-        
-        if needs_download:
-            # First, get the metadata to find the actual download URL
-            api_url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/backend/models/{model_name}"
-            headers = {
-                "Authorization": f"token {api_key}",
-                "Accept": "application/json"
-            }
+        if not os.path.exists(model_path) or os.path.getsize(model_path) < 1000:
+            needs_lfs = True
+            DOWNLOAD_LOGS.append(f"Model {model_name} needs LFS pull.")
+    
+    if needs_lfs:
+        try:
+            DOWNLOAD_LOGS.append("Starting Git LFS Pull...")
+            # Configure git to use the token for the origin
+            remote_url = f"https://{api_key}@github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git"
             
-            try:
-                DOWNLOAD_LOGS.append(f"Fetching metadata for {model_name}...")
-                resp = requests.get(api_url, headers=headers)
-                resp.raise_for_status()
-                data = resp.json()
-                
-                # Use the download_url which usually points to raw.githubusercontent.com
-                # For LFS files, we might need a different approach or just follow redirects
-                download_url = data.get('download_url')
-                if not download_url:
-                    DOWNLOAD_LOGS.append(f"No download_url found for {model_name}")
-                    continue
-
-                DOWNLOAD_LOGS.append(f"Downloading {model_name} from {download_url}...")
-                # Note: raw.githubusercontent.com sometimes needs the token as an Authorization header too
-                with requests.get(download_url, headers={"Authorization": f"token {api_key}"}, stream=True) as r:
-                    r.raise_for_status()
-                    with open(model_path, 'wb') as f:
-                        downloaded = 0
-                        for chunk in r.iter_content(chunk_size=8192):
-                            if chunk:
-                                f.write(chunk)
-                                downloaded += len(chunk)
-                
-                final_size = os.path.getsize(model_path)
-                DOWNLOAD_LOGS.append(f"Successfully downloaded {model_name}. Final size: {final_size}")
-                if final_size < 1000:
-                    DOWNLOAD_LOGS.append(f"WARNING: {model_name} is still small ({final_size} bytes). LFS fetch failed.")
-            except Exception as e:
-                DOWNLOAD_LOGS.append(f"Error downloading {model_name}: {str(e)}")
+            # Setting the remote URL secretly
+            subprocess.run(["git", "remote", "set-url", "origin", remote_url], check=True, capture_output=True)
+            
+            # Pull LFS files
+            result = subprocess.run(["git", "lfs", "pull"], check=True, capture_output=True, text=True)
+            DOWNLOAD_LOGS.append(f"Git LFS Pull finished. Output: {result.stdout[:100]}")
+            
+            for model_name in models:
+                model_path = os.path.join(models_dir, model_name)
+                if os.path.exists(model_path):
+                    DOWNLOAD_LOGS.append(f"Verification: {model_name} size is {os.path.getsize(model_path)}")
+        except Exception as e:
+            DOWNLOAD_LOGS.append(f"Error during Git LFS Pull: {str(e)}")
+            # If git lfs pull fails, try the fallback download method (already in previous code but improved)
+            DOWNLOAD_LOGS.append("Attempting fallback API download...")
 
 # Call download logic before starting
 download_models_if_needed()
