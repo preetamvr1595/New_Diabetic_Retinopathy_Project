@@ -49,25 +49,38 @@ def download_models_if_needed():
     
     if needs_lfs:
         try:
-            DOWNLOAD_LOGS.append("Starting Git LFS Pull...")
-            # Configure git to use the token for the origin
+            # Detect project root (parent of backend folder)
+            project_root = os.path.dirname(curr_dir)
+            
+            # Check if it's a git repo
+            if not os.path.exists(os.path.join(project_root, ".git")):
+                DOWNLOAD_LOGS.append("Not a git repo. Initializing temporary repo for LFS pull...")
+                subprocess.run(["git", "init"], cwd=project_root, check=True)
+            
             remote_url = f"https://{api_key}@github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git"
             
-            # Setting the remote URL secretly
-            subprocess.run(["git", "remote", "set-url", "origin", remote_url], check=True, capture_output=True)
+            # Ensure origin exists and is correct
+            subprocess.run(["git", "remote", "remove", "origin"], cwd=project_root, capture_output=True)
+            subprocess.run(["git", "remote", "add", "origin", remote_url], cwd=project_root, check=True)
             
-            # Pull LFS files
-            result = subprocess.run(["git", "lfs", "pull"], check=True, capture_output=True, text=True)
-            DOWNLOAD_LOGS.append(f"Git LFS Pull finished. Output: {result.stdout[:100]}")
+            DOWNLOAD_LOGS.append("Starting Git LFS Pull (root context)...")
+            subprocess.run(["git", "lfs", "install"], cwd=project_root, check=True)
+            
+            # We only want to pull the models to save time/bandwidth
+            result = subprocess.run(["git", "lfs", "pull", "--include", "backend/models/*"], 
+                                    cwd=project_root, check=True, capture_output=True, text=True)
+            
+            DOWNLOAD_LOGS.append(f"Git LFS Pull finished logic. Output snippet: {result.stdout[:50]}")
             
             for model_name in models:
                 model_path = os.path.join(models_dir, model_name)
                 if os.path.exists(model_path):
-                    DOWNLOAD_LOGS.append(f"Verification: {model_name} size is {os.path.getsize(model_path)}")
+                    size = os.path.getsize(model_path)
+                    DOWNLOAD_LOGS.append(f"Verification: {model_name} size is {size}")
+                    if size < 1000:
+                        DOWNLOAD_LOGS.append(f"CRITICAL: {model_name} is still small! LFS pull failed to fetch content.")
         except Exception as e:
             DOWNLOAD_LOGS.append(f"Error during Git LFS Pull: {str(e)}")
-            # If git lfs pull fails, try the fallback download method (already in previous code but improved)
-            DOWNLOAD_LOGS.append("Attempting fallback API download...")
 
 # Call download logic before starting
 download_models_if_needed()
