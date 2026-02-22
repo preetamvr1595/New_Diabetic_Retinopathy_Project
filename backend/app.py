@@ -48,24 +48,27 @@ def consolidate_models_if_needed():
         log(f"Assembling {model_name} from chunks...")
         
         if not os.path.exists(chunks_dir):
-            log(f"ERROR: Chunks directory missing! Cannot assemble {model_name}.")
+            log(f"ERROR: Chunks directory missing!")
             continue
 
         # Get all parts for this model
         parts = sorted([f for f in os.listdir(chunks_dir) if f.startswith(model_name + ".part")])
+        log(f"Found {len(parts)} parts for {model_name}: {parts}")
         
         if not parts:
-            log(f"ERROR: No chunks found for {model_name} in {chunks_dir}.")
             continue
 
         try:
             with open(model_path, 'wb') as out_f:
                 for part_name in parts:
                     part_path = os.path.join(chunks_dir, part_name)
+                    size = os.path.getsize(part_path)
+                    log(f"Adding {part_name} ({size} bytes)...")
                     with open(part_path, 'rb') as in_f:
                         out_f.write(in_f.read())
             
-            log(f"SUCCESS: {model_name} reassembled ({os.path.getsize(model_path)} bytes).")
+            final_size = os.path.getsize(model_path)
+            log(f"SUCCESS: {model_name} reassembled ({final_size} bytes).")
         except Exception as e:
             log(f"FAILED to reassemble {model_name}: {str(e)}")
 
