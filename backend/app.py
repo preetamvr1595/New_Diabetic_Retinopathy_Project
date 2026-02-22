@@ -17,6 +17,7 @@ GITHUB_REPO = "New_Diabetic_Retinopathy_Project"
 
 import shutil
 import tempfile
+import subprocess
 
 # Global variable to store download logs for health check
 DOWNLOAD_LOGS = []
