@@ -22,79 +22,55 @@ import subprocess
 # Global variable to store download logs for health check
 DOWNLOAD_LOGS = []
 
-from requests.auth import HTTPBasicAuth
-
-def download_models_if_needed():
+def consolidate_models_if_needed():
     global DOWNLOAD_LOGS
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(curr_dir, "models")
-    api_key = os.environ.get('GITHUB_API_KEY')
+    chunks_dir = os.path.join(models_dir, "chunks")
     
     def log(msg):
         t = time.strftime("%H:%M:%S")
         DOWNLOAD_LOGS.append(f"[{t}] {msg}")
 
-    if not api_key:
-        log("GITHUB_API_KEY not found. Skipping auto-download.")
-        return
+    # Ensure models directory exists
+    os.makedirs(models_dir, exist_ok=True)
 
-    models = [
-        {
-            "name": "dr_classifier.h5",
-            "oid": "23bea1bd9f4dbab68d5a933d18c30f9e8d752ad7af573ec18d2f70417932371946",
-            "size": 286928304
-        },
-        {
-            "name": "attention_unet.h5",
-            "oid": "e5376aee6e5d8ec68770742f50529d1872199d79313d33f7ccb837f480436f54",
-            "size": 389668688
-        }
-    ]
+    models = ["dr_classifier.h5", "attention_unet.h5"]
 
-    for model in models:
-        model_name = model["name"]
+    for model_name in models:
         model_path = os.path.join(models_dir, model_name)
         
+        # If model is already full size, skip
         if os.path.exists(model_path) and os.path.getsize(model_path) > 1000:
-            log(f"Model {model_name} exists (Size: {os.path.getsize(model_path)}).")
+            log(f"Model {model_name} is ready (Size: {os.path.getsize(model_path)}).")
+            continue
+
+        log(f"Assembling {model_name} from chunks...")
+        
+        if not os.path.exists(chunks_dir):
+            log(f"ERROR: Chunks directory missing! Cannot assemble {model_name}.")
+            continue
+
+        # Get all parts for this model
+        parts = sorted([f for f in os.listdir(chunks_dir) if f.startswith(model_name + ".part")])
+        
+        if not parts:
+            log(f"ERROR: No chunks found for {model_name} in {chunks_dir}.")
             continue
 
         try:
-            log(f"Requesting LFS Batch API for {model_name}...")
-            lfs_url = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git/info/lfs/objects/batch"
-            payload = {
-                "operation": "download",
-                "transfers": ["basic"],
-                "objects": [{"oid": model["oid"], "size": model["size"]}]
-            }
-            headers = {"Accept": "application/vnd.git-lfs+json", "Content-Type": "application/vnd.git-lfs+json"}
+            with open(model_path, 'wb') as out_f:
+                for part_name in parts:
+                    part_path = os.path.join(chunks_dir, part_name)
+                    with open(part_path, 'rb') as in_f:
+                        out_f.write(in_f.read())
             
-            resp = requests.post(lfs_url, json=payload, headers=headers, auth=HTTPBasicAuth('token', api_key))
-            resp.raise_for_status()
-            lfs_data = resp.json()
-            
-            obj_data = lfs_data['objects'][0]
-            if 'error' in obj_data:
-                log(f"LFS API Error: {obj_data['error']}")
-                continue
-                
-            download_url = obj_data['actions']['download']['href']
-            download_headers = obj_data['actions']['download'].get('header', {})
-            
-            log(f"Downloading {model_name}...")
-            with requests.get(download_url, headers=download_headers, stream=True) as r:
-                r.raise_for_status()
-                with open(model_path, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=1024*1024):
-                        if chunk: f.write(chunk)
-                            
-            log(f"SUCCESS: {model_name} downloaded ({os.path.getsize(model_path)} bytes).")
-            
+            log(f"SUCCESS: {model_name} reassembled ({os.path.getsize(model_path)} bytes).")
         except Exception as e:
-            log(f"FAILED {model_name}: {str(e)}")
+            log(f"FAILED to reassemble {model_name}: {str(e)}")
 
-# Call download logic before starting
-download_models_if_needed()
+# Combine chunks on startup
+consolidate_models_if_needed()
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}) # Allow all origins for API in production
