@@ -53,7 +53,7 @@ def download_models_if_needed():
     if needs_download:
         temp_repo_dir = None
         try:
-            DOWNLOAD_LOGS.append("Starting fresh git clone to fetch LFS models...")
+            DOWNLOAD_LOGS.append("Starting fresh git clone (Attempt 2) to fetch LFS models...")
             temp_repo_dir = tempfile.mkdtemp()
             
             # Use the token for the clone URL
