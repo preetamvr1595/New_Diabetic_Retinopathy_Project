@@ -52,21 +52,41 @@ def download_models_if_needed():
                 DOWNLOAD_LOGS.append(f"Model {model_name} is LFS pointer (size: {os.path.getsize(model_path)}).")
         
         if needs_download:
-            url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/backend/models/{model_name}"
+            # First, get the metadata to find the actual download URL
+            api_url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/backend/models/{model_name}"
             headers = {
                 "Authorization": f"token {api_key}",
-                "Accept": "application/vnd.github.v3.raw"
+                "Accept": "application/json"
             }
             
             try:
-                DOWNLOAD_LOGS.append(f"Downloading {model_name} from GitHub API...")
-                with requests.get(url, headers=headers, stream=True) as r:
+                DOWNLOAD_LOGS.append(f"Fetching metadata for {model_name}...")
+                resp = requests.get(api_url, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+                
+                # Use the download_url which usually points to raw.githubusercontent.com
+                # For LFS files, we might need a different approach or just follow redirects
+                download_url = data.get('download_url')
+                if not download_url:
+                    DOWNLOAD_LOGS.append(f"No download_url found for {model_name}")
+                    continue
+
+                DOWNLOAD_LOGS.append(f"Downloading {model_name} from {download_url}...")
+                # Note: raw.githubusercontent.com sometimes needs the token as an Authorization header too
+                with requests.get(download_url, headers={"Authorization": f"token {api_key}"}, stream=True) as r:
                     r.raise_for_status()
                     with open(model_path, 'wb') as f:
+                        downloaded = 0
                         for chunk in r.iter_content(chunk_size=8192):
                             if chunk:
                                 f.write(chunk)
-                DOWNLOAD_LOGS.append(f"Successfully downloaded {model_name}. New size: {os.path.getsize(model_path)}")
+                                downloaded += len(chunk)
+                
+                final_size = os.path.getsize(model_path)
+                DOWNLOAD_LOGS.append(f"Successfully downloaded {model_name}. Final size: {final_size}")
+                if final_size < 1000:
+                    DOWNLOAD_LOGS.append(f"WARNING: {model_name} is still small ({final_size} bytes). LFS fetch failed.")
             except Exception as e:
                 DOWNLOAD_LOGS.append(f"Error downloading {model_name}: {str(e)}")
 
