@@ -9,3 +9,4 @@ pandas
 matplotlib
 werkzeug
 gunicorn
+requests

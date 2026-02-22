@@ -8,6 +8,69 @@ import uuid
 from filters import apply_all_filters
 from segmentation import segment_image
 from classification import classify_image
+import requests
+import time
+
+# GitHub details for downloading models if they are LFS pointers
+GITHUB_OWNER = "preetamvr1595"
+GITHUB_REPO = "New_Diabetic_Retinopathy_Project"
+
+def download_models_if_needed():
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    models_dir = os.path.join(curr_dir, "models")
+    api_key = os.environ.get('GITHUB_API_KEY')
+    
+    if not api_key:
+        print("GITHUB_API_KEY not found in environment. Skipping auto-download.")
+        return
+
+    models = [
+        "dr_classifier.h5",
+        "attention_unet.h5"
+    ]
+
+    for model_name in models:
+        model_path = os.path.join(models_dir, model_name)
+        needs_download = False
+        
+        if not os.path.exists(model_path):
+            needs_download = True
+            print(f"Model {model_name} missing. Downloading...")
+        else:
+            # Check if it's an LFS pointer (usually < 1KB)
+            if os.path.getsize(model_path) < 1000:
+                needs_download = True
+                print(f"Model {model_name} appears to be an LFS pointer. Downloading full model...")
+        
+        if needs_download:
+            url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/backend/models/{model_name}"
+            headers = {
+                "Authorization": f"token {api_key}",
+                "Accept": "application/vnd.github.v3.raw"
+            }
+            
+            try:
+                print(f"Starting download of {model_name}...")
+                with requests.get(url, headers=headers, stream=True) as r:
+                    r.raise_for_status()
+                    total_size = int(r.headers.get('content-length', 0))
+                    downloaded = 0
+                    start_time = time.time()
+                    
+                    with open(model_path, 'wb') as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                                if time.time() - start_time > 5: # Print progress every 5 seconds
+                                    print(f"Downloading {model_name}: {downloaded}/{total_size} bytes ({(downloaded/total_size)*100:.2f}%)")
+                                    start_time = time.time()
+                print(f"Successfully downloaded {model_name}.")
+            except Exception as e:
+                print(f"Error downloading {model_name}: {e}")
+
+# Call download logic before starting
+download_models_if_needed()
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}) # Allow all origins for API in production
