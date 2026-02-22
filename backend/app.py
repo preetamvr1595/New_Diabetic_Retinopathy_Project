@@ -15,7 +15,8 @@ import time
 GITHUB_OWNER = "preetamvr1595"
 GITHUB_REPO = "New_Diabetic_Retinopathy_Project"
 
-import subprocess
+import shutil
+import tempfile
 
 # Global variable to store download logs for health check
 DOWNLOAD_LOGS = []
@@ -32,6 +33,7 @@ def download_models_if_needed():
         DOWNLOAD_LOGS.append(msg)
         return
 
+    # Log token properties for debugging (hidden value)
     token_prefix = api_key[:4] + "..." if len(api_key) > 4 else api_key
     DOWNLOAD_LOGS.append(f"GITHUB_API_KEY detected: {token_prefix} (length: {len(api_key)})")
 
@@ -40,47 +42,57 @@ def download_models_if_needed():
         "attention_unet.h5"
     ]
 
-    needs_lfs = False
+    needs_download = False
     for model_name in models:
         model_path = os.path.join(models_dir, model_name)
         if not os.path.exists(model_path) or os.path.getsize(model_path) < 1000:
-            needs_lfs = True
-            DOWNLOAD_LOGS.append(f"Model {model_name} needs LFS pull.")
+            needs_download = True
+            DOWNLOAD_LOGS.append(f"Model {model_name} needs full download.")
     
-    if needs_lfs:
+    if needs_download:
+        temp_repo_dir = None
         try:
-            # Detect project root (parent of backend folder)
-            project_root = os.path.dirname(curr_dir)
+            DOWNLOAD_LOGS.append("Starting fresh git clone to fetch LFS models...")
+            temp_repo_dir = tempfile.mkdtemp()
             
-            # Check if it's a git repo
-            if not os.path.exists(os.path.join(project_root, ".git")):
-                DOWNLOAD_LOGS.append("Not a git repo. Initializing temporary repo for LFS pull...")
-                subprocess.run(["git", "init"], cwd=project_root, check=True)
+            # Use the token for the clone URL
+            clone_url = f"https://{api_key}@github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git"
             
-            remote_url = f"https://{api_key}@github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git"
+            # Clone with --depth 1 (includes LFS files if git-lfs is installed)
+            result = subprocess.run([
+                "git", "clone", "--depth", "1", clone_url, temp_repo_dir
+            ], capture_output=True, text=True, timeout=300)
             
-            # Ensure origin exists and is correct
-            subprocess.run(["git", "remote", "remove", "origin"], cwd=project_root, capture_output=True)
-            subprocess.run(["git", "remote", "add", "origin", remote_url], cwd=project_root, check=True)
+            if result.returncode != 0:
+                DOWNLOAD_LOGS.append(f"Git Clone Failed: {result.stderr[:200]}")
+                return
+
+            DOWNLOAD_LOGS.append("Clone successful. Verifying models in clone...")
             
-            DOWNLOAD_LOGS.append("Starting Git LFS Pull (root context)...")
-            subprocess.run(["git", "lfs", "install"], cwd=project_root, check=True)
-            
-            # We only want to pull the models to save time/bandwidth
-            result = subprocess.run(["git", "lfs", "pull", "--include", "backend/models/*"], 
-                                    cwd=project_root, check=True, capture_output=True, text=True)
-            
-            DOWNLOAD_LOGS.append(f"Git LFS Pull finished logic. Output snippet: {result.stdout[:50]}")
+            # Source path in the cloned repo
+            src_models_dir = os.path.join(temp_repo_dir, "backend", "models")
             
             for model_name in models:
-                model_path = os.path.join(models_dir, model_name)
-                if os.path.exists(model_path):
-                    size = os.path.getsize(model_path)
-                    DOWNLOAD_LOGS.append(f"Verification: {model_name} size is {size}")
-                    if size < 1000:
-                        DOWNLOAD_LOGS.append(f"CRITICAL: {model_name} is still small! LFS pull failed to fetch content.")
+                src_path = os.path.join(src_models_dir, model_name)
+                dest_path = os.path.join(models_dir, model_name)
+                
+                if os.path.exists(src_path):
+                    size = os.path.getsize(src_path)
+                    DOWNLOAD_LOGS.append(f"Found {model_name} in clone (size: {size}).")
+                    if size > 1000:
+                        shutil.copy2(src_path, dest_path)
+                        DOWNLOAD_LOGS.append(f"Successfully replaced {model_name} with full version.")
+                    else:
+                        DOWNLOAD_LOGS.append(f"WARNING: {model_name} in clone is ALSO an LFS pointer!")
+                else:
+                    DOWNLOAD_LOGS.append(f"Could not find {model_name} in cloned repository at {src_path}")
+                    
         except Exception as e:
-            DOWNLOAD_LOGS.append(f"Error during Git LFS Pull: {str(e)}")
+            DOWNLOAD_LOGS.append(f"Error during model fetch: {str(e)}")
+        finally:
+            if temp_repo_dir and os.path.exists(temp_repo_dir):
+                shutil.rmtree(temp_repo_dir, ignore_errors=True)
+                DOWNLOAD_LOGS.append("Cleaned up temporary clone.")
 
 # Call download logic before starting
 download_models_if_needed()
