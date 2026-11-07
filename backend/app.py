@@ -10,7 +10,7 @@ from segmentation import segment_image
 from classification import classify_image
 import requests
 import time
-
+import pandas as pd
 # GitHub details for downloading models if they are LFS pointers
 GITHUB_OWNER = "preetamvr1595"
 GITHUB_REPO = "New_Diabetic_Retinopathy_Project"
