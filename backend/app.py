@@ -14,11 +14,10 @@ import pandas as pd
 # GitHub details for downloading models if they are LFS pointers
 GITHUB_OWNER = "preetamvr1595"
 GITHUB_REPO = "New_Diabetic_Retinopathy_Project"
-
+import matplotlib.pyplot as plt
 import shutil
 import tempfile
 import subprocess
-
 # Global variable to store download logs for health check
 DOWNLOAD_LOGS = []
 
